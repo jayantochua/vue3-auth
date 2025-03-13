@@ -4,6 +4,7 @@
       <h1>Dashboard</h1>
       <nav>
         <router-link to="/profile">Profile</router-link>
+        <button class="btn" @click="clickTest">Link with parameter</button>
         <button @click="handleLogout" class="logout-button">Logout</button>
       </nav>
     </header>
@@ -50,6 +51,19 @@ const handleLogout = async () => {
   await authStore.logout();
   router.push("/login");
 };
+const clickTest = async () => {
+  // http://localhost:5173/param/789?action=edit&status=active
+  router.push({
+    name: "paramView",
+    params: {
+      id: 789
+    },
+    query: {
+      action: "edit",
+      status: "active"
+    }
+  });
+};
 
 defineOptions({
   name: "DashboardView"
@@ -81,6 +95,14 @@ nav {
 nav a {
   color: #4f46e5;
   text-decoration: none;
+}
+.btn {
+  padding: 0.5rem 1rem;
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .logout-button {

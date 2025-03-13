@@ -45,15 +45,15 @@ export const useAuthStore = defineStore("auth", {
 
       // Jika checkFirst masih false, coba dapatkan profil pengguna
       if (!this.checkFirst) {
-        const ok = await this.getRefreshToken();
-        if (ok) {
-          await this.getUserProfile();
-          if (this.isAuthenticatedStatus) {
-            this.checkFirst = true; // Set checkFirst menjadi true
-            this.startRefreshTokenTimer();
-            return true;
-          }
+        // const ok = await this.getRefreshToken();
+        // if (ok) {
+        await this.getUserProfile();
+        if (this.isAuthenticatedStatus) {
+          this.checkFirst = true; // Set checkFirst menjadi true
+          this.startRefreshTokenTimer();
+          return true;
         }
+        // }
         return this.isAuthenticatedStatus;
       }
       // Kembalikan status otentikasi

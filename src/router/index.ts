@@ -6,6 +6,7 @@ import Login from "../views/Login.vue";
 import Dashboard from "../views/Dashboard.vue";
 import Profile from "../views/Profile.vue";
 import NotFound from "../views/NotFound.vue";
+import ParamView from "@/views/ParamView.vue";
 
 const routes = [
   {
@@ -28,6 +29,12 @@ const routes = [
     path: "/profile",
     name: "Profile",
     component: Profile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/param/:id",
+    name: "paramView",
+    component: ParamView,
     meta: { requiresAuth: true },
   },
   {
