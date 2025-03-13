@@ -54,7 +54,7 @@ const loading = ref(true);
 onMounted(async () => {
   try {
     if (!authStore.user) {
-      await authStore.fetchUserProfile();
+      await authStore.getUserProfile();
     }
   } finally {
     loading.value = false;

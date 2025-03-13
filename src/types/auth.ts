@@ -15,9 +15,9 @@ export interface LoginCredentials {
 export interface LoginResult {
   access_token: string | ""; // Token akses, opsional
   refresh_token: string | ""; // Token refresh, opsional
-  token_type?: string | null; // Jenis token, opsional
-  expires_in?: number | null; // Durasi kedaluwarsa dalam detik, opsional
-  csrf_token?: string | null; // Token CSRF, opsional
+  token_type: string | null; // Jenis token, opsional
+  expires_in: number | null; // Durasi kedaluwarsa dalam detik, opsional
+  csrf_token: string | ""; // Token CSRF, opsional
   needs_password_change?: boolean | null; // Apakah pengguna perlu mengganti kata sandi, opsional
   two_factor_enabled?: boolean | null; // Apakah autentikasi dua faktor diaktifkan, opsional
   status_code: number; // Kode status HTTP, default 200
@@ -28,10 +28,16 @@ export interface LoginResult {
 
 export interface AuthState {
   user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
+  accessToken: string | null;
+  refreshToken: string | null;
+  csrfToken: string | null;
+
+  isAuthenticatedStatus: boolean;
   loading: boolean;
   error: string | null;
   loginResult: LoginResult | null;
   redirectPath: string | null;
+  checkFirst: boolean | null; // Variabel internal, hanya digunakan di dalam store
+  browserID: string | null;
+  refreshTokenInterval: NodeJS.Timeout | null; // Tambahkan union type
 }

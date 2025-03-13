@@ -46,16 +46,31 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.meta.requiresAuth;
-
+  const isAuthenticated = await authStore.isAuthenticated(); // Pastikan status otentikasi tersedia
+  // console.log("beforeEach: from", from, "to", to);
+  //
   // If route requires authentication and user is not authenticated
-  if (requiresAuth && !authStore.isAuthenticated) {
-    authStore.setRedirectPath(to.fullPath);
+  //
+  if (requiresAuth && !isAuthenticated) {
+    // console.log("beforeEach.BelumLogin");
+    authStore.saveRedirectPath(to.fullPath); // digunakan dilogin form
+    // const handleLogin = async () => {
+    //   const success = await authStore.login(credentials);
+    //   if (success) {
+    //     //
+    //     // redirectPath disimpan oleh router.beforeEach,
+    //     // supaya bisa setelah login masuk ke page yang sama
+    //     //
+    //     router.push(authStore.redirectPath || "/dashboard");
+    //   }
+    // };
     next("/login");
     return;
   }
-
+  //
   // If user is authenticated and trying to access login page
-  if (authStore.isAuthenticated && to.name === "Login") {
+  //
+  if (isAuthenticated && to.name === "Login") {
     next("/dashboard");
     return;
   }

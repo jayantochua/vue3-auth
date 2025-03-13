@@ -9,7 +9,7 @@
     </header>
 
     <main class="dashboard-content">
-      <h2>Welcome, {{ authStore.user?.username }}!</h2>
+      <h2>Welcome, {{ authStore.user?.full_name }}!</h2>
 
       <div class="dashboard-info">
         <p>Your roles: {{ authStore.userRoles.join(', ') || 'No roles assigned' }}</p>
@@ -40,12 +40,6 @@ const authStore = useAuthStore();
 const loading = ref(true);
 
 onMounted(async () => {
-  console.log("dashboard.onMounted", authStore.user);
-  // Fetch user profile if needed
-  if (!authStore.user) {
-    await authStore.fetchUserProfile();
-  }
-
   // Simulate loading dashboard data
   setTimeout(() => {
     loading.value = false;
