@@ -52,11 +52,23 @@ const handleLogout = async () => {
   router.push("/login");
 };
 const clickTest = async () => {
-  // http://localhost:5173/param/789?action=edit&status=active
+  //
+  // parameter di bawah, hasilnya akan seperti dibawah ini
+  // http://localhost:5173/paramView/789?action=edit&status=active
+  //
+  // Definisi Route /src/router/index.ts
+  //
+  //  {
+  //    path: "/paramView/:id",
+  //    name: "paramView",
+  //    component: ParamView,
+  //    meta: { requiresAuth: true },
+  //  },
+  //
   router.push({
     name: "paramView",
     params: {
-      id: 789
+      id: 789 // ada di route definition (lihat di atas)
     },
     query: {
       action: "edit",

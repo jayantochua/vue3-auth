@@ -32,7 +32,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/param/:id",
+    path: "/paramView/:id",
     name: "paramView",
     component: ParamView,
     meta: { requiresAuth: true },
@@ -59,7 +59,14 @@ router.beforeEach(async (to, from, next) => {
   // If route requires authentication and user is not authenticated
   //
   if (requiresAuth && !isAuthenticated) {
-    // console.log("beforeEach.BelumLogin");
+    //
+    // user langsung buka page
+    //    -> http://localhost:5173/paramView/789?action=edit&status=active
+    //
+    // karena belum login (NOT isAuthenticated), "to.fullPath" disimpan dulu
+    // supaya setelah login, nanti akan di-redire ke page tersebut
+    // redirect dilakuan di page login, setelah login berhasil
+    //
     authStore.saveRedirectPath(to.fullPath); // digunakan dilogin form
     // const handleLogin = async () => {
     //   const success = await authStore.login(credentials);

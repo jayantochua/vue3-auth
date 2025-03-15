@@ -59,7 +59,7 @@ const handleLogin = async () => {
   const success = await authStore.login(credentials);
   if (success) {
     //
-    // redirectPath disimpan oleh router.beforeEach, 
+    // redirectPath disimpan oleh router.beforeEach lihat (/src/router/index.ts)
     // supaya bisa setelah login masuk ke page yang sama
     //
     router.push(authStore.redirectPath || "/dashboard");
