@@ -1,4 +1,3 @@
-// src/main.ts
 import router from "../router";
 import axios from "axios";
 import { useAuthStore } from "./auth";
@@ -7,8 +6,11 @@ export function initApp() {
   //
   // function dipanggil dari main.ts
   //
-  axios.defaults.withCredentials = true;
+  axios.defaults.withCredentials = true; // supaya cookies dikirim dan dibaca
+  axios.defaults.headers.common["Content-Type"] = "application/json";
+  //
   // Generate browser fingerprint if not present
+  //
   let browserID: string;
   try {
     browserID = new BrowserFingerprinter().getFingerprint();

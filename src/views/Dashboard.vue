@@ -5,6 +5,9 @@
       <nav>
         <router-link to="/profile">Profile</router-link>
         <button class="btn" @click="clickTest">Link with parameter</button>
+        <button class="btn" @click="clickConfirm">Confirm</button>
+        <button class="btn" @click="showAlert">Alert</button>
+        <button class="btn" @click="clickForm">Form</button>
         <button @click="handleLogout" class="logout-button">Logout</button>
       </nav>
     </header>
@@ -34,6 +37,12 @@
 import { ref, onMounted, defineOptions } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../store/auth";
+///
+
+import { useDialog } from "../services/dialog";
+import FormDialog from "../components/FormDialog.vue";
+
+const { dialog, confirm, alert } = useDialog();
 
 // Setup
 const router = useRouter();
@@ -80,6 +89,37 @@ const clickTest = async () => {
   });
 };
 
+const clickConfirm = () => {
+  confirm("Apakah Anda yakin ingin melanjutkan?")
+    .onOk(() => {
+      alert("Tindakan berhasil dilakukan!");
+    })
+    .onCancel(() => {
+      console.log("Tindakan dibatalkan");
+    });
+};
+
+const clickForm = () => {
+  dialog({
+    component: FormDialog,
+    persistent: true,
+    componentProps: {
+      title: "Konfirmasi",
+      message: "Apakah Anda yakin ingin melanjutkan?"
+    }
+  })
+    .onOk(() => {
+      console.log("User menekan OK");
+      // Lakukan sesuatu saat user konfirmasi
+    })
+    .onCancel(() => {
+      console.log("User menekan Cancel");
+    });
+};
+
+const showAlert = () => {
+  alert("Ini <b>Alert</b>!");
+};
 defineOptions({
   name: "DashboardView"
 });

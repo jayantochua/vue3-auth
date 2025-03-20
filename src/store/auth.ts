@@ -37,9 +37,7 @@ export const useAuthStore = defineStore("auth", () => {
   function setAxiosHeader(flagLoad: boolean) {
     if (flagLoad) {
       axios.defaults.headers.common["X-CSRF-Token"] = csrfToken.value;
-      axios.defaults.headers.common["Content-Type"] = "application/json";
     } else {
-      delete axios.defaults.headers.common["Authorization"];
       delete axios.defaults.headers.common["X-CSRF-Token"];
     }
   }
