@@ -49,8 +49,8 @@ const authStore = useAuthStore();
 
 // Reactive state for form credentials
 const credentials = reactive<LoginCredentials>({
-  username: "jay",
-  pswd: "3"
+  username: "civan",
+  pswd: "1"
 });
 
 // Handle login logic
@@ -58,7 +58,6 @@ const handleLogin = async () => {
   console.log('credentials', credentials)
   const success = await authStore.login(credentials);
   if (success) {
-    //
     // redirectPath disimpan oleh router.beforeEach lihat (/src/router/index.ts)
     // supaya bisa setelah login masuk ke page yang sama
     //

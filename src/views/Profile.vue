@@ -29,7 +29,7 @@
                 v-for="(role, index) in authStore.userRoles"
                 :key="role"
                 class="role-badge"
-              >{{ role }}{{ index < authStore.userRoles.length - 1 ? ', ' : '' }}</span>
+              >{{ role }}{{ (index < (authStore.userRoles.length - 1)) ? ', ' : '' }}</span>
               <span v-if="!authStore.userRoles.length">No roles assigned</span>
             </span>
           </div>

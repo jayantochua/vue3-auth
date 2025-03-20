@@ -65,6 +65,9 @@ const clickTest = async () => {
   //    meta: { requiresAuth: true },
   //  },
   //
+  console.log("clickTest");
+  // await authStore.getUserProfile();
+  console.log("clickTest after getUserProfile");
   router.push({
     name: "paramView",
     params: {

@@ -1,244 +1,293 @@
 // src/store/auth.ts
 import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 import axios from "axios";
 import type { AuthState, LoginCredentials, User, LoginResult } from "../types/auth";
-import { BrowserFingerprinter } from "./fingerprint.ts";
+import { BrowserFingerprinter } from "./fingerprint";
 
 // Determine API URL based on environment
 const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
-export const useAuthStore = defineStore("auth", {
-  state: (): AuthState => ({
-    user: null,
-    accessToken: localStorage.getItem("accessToken"),
-    refreshToken: localStorage.getItem("refreshToken"),
-    csrfToken: localStorage.getItem("csrf_token"),
-    isAuthenticatedStatus: false,
-    loading: false,
-    error: null,
-    loginResult: null,
-    redirectPath: null,
-    checkFirst: false, // Variabel internal, hanya digunakan di dalam store
-    browserID: "",
-    refreshTokenInterval: null as NodeJS.Timeout | null,
-  }),
+export const useAuthStore = defineStore("auth", () => {
+  // State
+  const user = ref<User | null>(null);
+  const accessToken = ref<string | null>(null);
+  const refreshToken = ref<string | null>(null);
+  const csrfToken = ref<string | null>(null);
+  const isAuthenticatedStatus = ref(false);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const loginResult = ref<LoginResult | null>(null);
+  const redirectPath = ref<string | null>(null);
+  const checkFirst = ref(false);
+  const browserID = ref("");
+  const refreshTokenInterval = ref<NodeJS.Timeout | null>(null);
+  const token_expires_in = ref(0);
 
-  getters: {
-    currentUser: (state) => state.user,
-    userRoles: (state) => state.user?.roles || [],
-    isAdmin: (state) => state.user?.roles.includes("admin") || false,
-  },
+  // Getters
+  const currentUser = computed(() => user.value);
+  const userRoles = computed(() => user.value?.roles || []);
+  const isAdmin = computed(() => user.value?.roles.includes("admin") || false);
 
-  actions: {
-    /**
-     * Fungsi untuk memeriksa apakah pengguna sudah terotentikasi.
-     * Juga memuat browserID jika belum ada.
-     */
-    async isAuthenticated(): Promise<boolean> {
-      // Load browserID jika belum ada
-      if (!this.browserID) {
-        const fingerprinter = new BrowserFingerprinter();
-        this.browserID = fingerprinter.getFingerprint();
-        console.log("Generated browserID:", this.browserID);
-        axios.defaults.headers.common["Device-Id"] = this.browserID;
-      }
+  // Functions
 
-      // Jika checkFirst masih false, coba dapatkan profil pengguna
-      if (!this.checkFirst) {
-        // const ok = await this.getRefreshToken();
-        // if (ok) {
-        await this.getUserProfile();
-        if (this.isAuthenticatedStatus) {
-          this.checkFirst = true; // Set checkFirst menjadi true
-          this.startRefreshTokenTimer();
-          return true;
-        }
-        // }
-        return this.isAuthenticatedStatus;
-      }
-      // Kembalikan status otentikasi
-      return this.isAuthenticatedStatus;
-    },
-    /**
-     * Inisialisasi store dan generate browserID
-     */
-    async login(credentials: LoginCredentials): Promise<boolean> {
-      this.loading = true;
-      this.error = null;
+  /**
+   * Sets Axios headers for authentication
+   */
+  function setAxiosHeader(flagLoad: boolean) {
+    if (flagLoad) {
+      axios.defaults.headers.common["X-CSRF-Token"] = csrfToken.value;
+      axios.defaults.headers.common["Content-Type"] = "application/json";
+    } else {
+      delete axios.defaults.headers.common["Authorization"];
+      delete axios.defaults.headers.common["X-CSRF-Token"];
+    }
+  }
 
-      try {
-        const response = await axios.post(`${apiBaseUrl}/auth/user/login`, credentials, {
-          headers: { "Content-Type": "application/json" },
-        });
-        console.log("login.response", response);
-        const Res: LoginResult = response.data;
-        console.log(Res);
-        this.loginResult = Res;
-        this.isAuthenticatedStatus = Res.success;
-        if (this.isAuthenticatedStatus) {
-          this.saveTokens(Res.access_token, Res.refresh_token, Res.csrf_token);
-          //
-          // Start refresh token interval
-          //
-          this.startRefreshTokenTimer();
-        } else {
-          this.error = Res.message ? Res.message : "";
-        }
-        return this.isAuthenticatedStatus;
-      } catch (error: any) {
-        this.error = error.response?.data?.message || "Login failed. Please try again.";
-        return false;
-      } finally {
-        this.loading = false;
-      }
-    },
+  /**
+   * Saves authentication tokens
+   */
+  function saveTokens(access_token?: string, refresh_token?: string, csrf_token?: string) {
+    if (!access_token || !refresh_token || !csrf_token) {
+      user.value = null;
+      isAuthenticatedStatus.value = false;
+      loginResult.value = null;
+      accessToken.value = null;
+      refreshToken.value = null;
+      csrfToken.value = null;
+    } else {
+      accessToken.value = access_token;
+      refreshToken.value = refresh_token;
+      csrfToken.value = csrf_token;
+    }
 
-    async logout(): Promise<void> {
-      try {
-        // Optional: Call logout endpoint if your API requires it
-        if (this.accessToken) {
-          await axios.post(
-            `${apiBaseUrl}/auth/user/logout`,
-            {},
-            {
-              headers: { Authorization: `Bearer ${this.accessToken}` },
-            }
-          );
-        }
-      } catch (error) {
-        console.error("Logout API error:", error);
-      } finally {
-        // Reset state regardless of API response
-        this.saveTokens();
-      }
-    },
+    console.log("saveTokens");
+    if (access_token) {
+      console.log("   access_token", access_token.slice(0, 8) + "..." + access_token.slice(-12));
+    }
+    if (refresh_token) {
+      console.log("   refresh_token", refresh_token.slice(0, 8) + "..." + refresh_token.slice(-12));
+    }
+    if (csrf_token) {
+      console.log("   csrf_token", csrf_token.slice(0, 8) + "..." + csrf_token.slice(-12));
+    }
+    console.log("saveTokens");
+  }
 
-    async getUserProfile(): Promise<void> {
-      if (!this.accessToken) return;
-      this.loading = true;
+  /**
+   * Clears refresh token timer
+   */
+  function clearRefreshTimer() {
+    if (refreshTokenInterval.value) {
+      clearInterval(refreshTokenInterval.value);
+      refreshTokenInterval.value = null;
+    }
+  }
 
-      try {
-        const response = await axios.get(`${apiBaseUrl}/auth/user/profile`, {
-          headers: { Authorization: `Bearer ${this.accessToken}` },
-        });
-        // console.log(response);
-        const user: User = response.data;
-        this.user = user;
-        this.user.roles = ["admin"];
-        this.isAuthenticatedStatus = true; // Set authenticated to true jika fetch berhasil
-      } catch (error: any) {
-        if (error.response?.status === 401) {
-          // Token expired or invalid
-          this.logout();
-        }
-      } finally {
-        this.loading = false;
-      }
-    },
-    async getRefreshToken() {
-      // console.log("startRefreshTokenTimer", `Bearer ${this.refreshToken}`);
-      try {
-        const response = await axios.post(
-          `${apiBaseUrl}/auth/user/refreshtoken`,
-          {},
-          {
-            headers: { Authorization: `Bearer ${this.refreshToken}` },
-          }
-        );
-        console.log("refresh_token", response);
-        const Res: LoginResult = response.data;
-        if (Res.success) {
-          this.saveTokens(Res.access_token, Res.refresh_token, Res.csrf_token);
-        } else {
-          this.saveTokens();
-        }
-        console.log("refreshToken successfully.");
-        return Res.success;
-      } catch (error) {
-        console.error("Failed to refresh token:", error);
-        return false;
-      }
-    },
-    /**
-     * Memulai interval untuk refresh token setiap 15 menit
-     */
-    startRefreshTokenTimer() {
-      // Bersihkan interval yang ada (jika ada)
-      this.clearRefreshTimer();
-      console.log("startRefreshTokenTimer");
-      // Set interval untuk refresh token setiap 15 menit (900.000 ms)
-      this.refreshTokenInterval = setInterval(async () => {
-        const ok = await this.getRefreshToken();
-        if (!ok) {
-          this.clearRefreshTimer();
-        }
-      }, 15 * 60 * 1000); // 15 menit = 900.000 ms
-    },
-    /**
-     * Membersihkan interval refresh token
-     */
-    clearRefreshTimer() {
-      if (this.refreshTokenInterval) {
-        clearInterval(this.refreshTokenInterval);
-        this.refreshTokenInterval = null;
-      }
-    },
-    setAxiosHeader(flagLoad: Boolean) {
-      if (flagLoad) {
-        //
-        // Set default Authorization header for future requests
-        //
-        axios.defaults.headers.common["Authorization"] = `Bearer ${this.accessToken}`;
-        axios.defaults.headers.common["X-CSRF-Token"] = this.csrfToken;
+  /**
+   * Refreshes authentication token
+   */
+  async function getRefreshToken() {
+    try {
+      const response = await axios.post(`${apiBaseUrl}/auth/client/refreshtoken`);
+      console.log("refresh_token", response);
+
+      const res: LoginResult = response.data;
+      if (res.success) {
+        token_expires_in.value = res.expires_in;
+        saveTokens(res.access_token, res.refresh_token, res.csrf_token);
+        startRefreshTokenTimer();
       } else {
-        delete axios.defaults.headers.common["Authorization"];
-        delete axios.defaults.headers.common["X-CSRF-Token"];
+        saveTokens();
+        clearRefreshTimer();
       }
-    },
-    saveTokens(access_token?: string, refresh_token?: string, csrf_token?: string) {
-      if (!access_token || !refresh_token || !csrf_token) {
-        this.user = null;
-        this.isAuthenticatedStatus = false;
-        this.loginResult = null;
-        this.accessToken = null;
-        this.refreshToken = null;
-        this.csrfToken = null;
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("csrf_token");
-        //
-        // Clear localStorage and axios headers
-        //
-        this.setAxiosHeader(false);
-      } else {
-        this.accessToken = access_token;
-        this.refreshToken = refresh_token;
-        this.csrfToken = csrf_token;
-        localStorage.setItem("accessToken", access_token);
-        localStorage.setItem("refreshToken", refresh_token);
-        localStorage.setItem("csrf_token", csrf_token);
 
-        //
-        // Set default Authorization header for future requests
-        //
-        this.setAxiosHeader(true);
+      console.log("refreshToken successfully.");
+      return res.success;
+    } catch (error) {
+      console.error("Failed to refresh token:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Starts refresh token timer
+   */
+  function startRefreshTokenTimer() {
+    // Clear existing timer if any
+    clearRefreshTimer();
+
+    // Calculate timeout (80% of token expiry time for safety)
+    const timeOut = token_expires_in.value ? 0.8 * 1000 * token_expires_in.value : 60 * 1000;
+
+    console.log(
+      "RefreshTokenTimer, token_expires_in",
+      token_expires_in.value,
+      "ms=",
+      token_expires_in.value / 1000,
+      "sec=",
+      token_expires_in.value / (60 * 1000),
+      "mins (if zero, browser just refreshed)"
+    );
+
+    console.log("RefreshToken in ", timeOut, "ms=", timeOut / 1000, "sec=", timeOut / (60 * 1000), "mins");
+
+    // Set interval for token refresh
+    refreshTokenInterval.value = setInterval(async () => {
+      const ok = await getRefreshToken();
+      if (!ok) {
+        clearRefreshTimer();
       }
-      console.log("saveTokens");
-      console.log("   access_token", access_token?.slice(0, 8) + "..." + access_token?.slice(-12));
-      console.log("   refresh_token", refresh_token?.slice(0, 8) + "..." + refresh_token?.slice(-12));
-      console.log("   csrf_token", csrf_token?.slice(0, 8) + "..." + csrf_token?.slice(-12));
-      console.log("saveTokens");
-    },
-    // Check if the user has a specific permission/role
-    hasPermission(role: string): boolean {
-      return this.user?.roles.includes(role) || false;
-    },
-    saveRedirectPath(path: string) {
-      console.log("saveRedirectPath", path);
-      this.redirectPath = path;
-    },
-    getBrowserI(): string {
-      return this.browserID ? this.browserID : "";
-    },
-  },
+    }, timeOut);
+  }
+
+  /**
+   * Fetches user profile
+   */
+  async function getUserProfile(): Promise<void> {
+    isAuthenticatedStatus.value = false;
+    loading.value = true;
+
+    try {
+      const response = await axios.get(`${apiBaseUrl}/auth/client/profile`);
+
+      const userProfile: User = response.data;
+      user.value = userProfile;
+
+      if (user.value) {
+        user.value.roles = ["admin"]; // Set roles
+        isAuthenticatedStatus.value = true;
+      }
+    } catch (error: any) {
+      console.log("getUserProfile error", error);
+      if (error.response?.status === 401) {
+        // Token expired or invalid
+      }
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Checks if user is authenticated
+   */
+  async function isAuthenticated(): Promise<boolean> {
+    console.log("isAuthenticated");
+    // If first check, try to get user profile
+    if (!checkFirst.value) {
+      checkFirst.value = true;
+      await getUserProfile();
+
+      if (isAuthenticatedStatus.value) {
+        startRefreshTokenTimer();
+        return true;
+      }
+    }
+
+    return isAuthenticatedStatus.value;
+  }
+
+  /**
+   * Logs in user
+   */
+  async function login(credentials: LoginCredentials): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const response = await axios.post(`${apiBaseUrl}/auth/client/login`, credentials);
+      console.log("login.response", response);
+
+      const res: LoginResult = response.data;
+      token_expires_in.value = res.expires_in;
+      loginResult.value = res;
+
+      isAuthenticatedStatus.value = res.success;
+
+      if (isAuthenticatedStatus.value) {
+        saveTokens(res.access_token, res.refresh_token, res.csrf_token);
+        startRefreshTokenTimer();
+      } else {
+        error.value = res.message || "";
+      }
+
+      return isAuthenticatedStatus.value;
+    } catch (error: any) {
+      error.value = error.response?.data?.message || "Login failed. Please try again.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Logs out user
+   */
+  async function logout(): Promise<void> {
+    try {
+      if (accessToken.value) {
+        await axios.post(`${apiBaseUrl}/auth/client/logout`);
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      saveTokens(); // Clear tokens
+    }
+  }
+
+  /**
+   * Checks if user has specific permission/role
+   */
+  function hasPermission(role: string): boolean {
+    return user.value?.roles.includes(role) || false;
+  }
+
+  /**
+   * Saves redirect path
+   */
+  function saveRedirectPath(path: string) {
+    console.log("saveRedirectPath", path);
+    redirectPath.value = path;
+  }
+
+  /**
+   * Gets browser ID
+   */
+  function getBrowserI(): string {
+    return browserID.value || "";
+  }
+
+  return {
+    // State
+    user,
+    accessToken,
+    refreshToken,
+    csrfToken,
+    isAuthenticatedStatus,
+    loading,
+    error,
+    loginResult,
+    redirectPath,
+    browserID,
+    token_expires_in,
+
+    // Getters
+    currentUser,
+    userRoles,
+    isAdmin,
+
+    // Actions
+    isAuthenticated,
+    login,
+    logout,
+    getUserProfile,
+    getRefreshToken,
+    startRefreshTokenTimer,
+    clearRefreshTimer,
+    setAxiosHeader,
+    saveTokens,
+    hasPermission,
+    saveRedirectPath,
+    getBrowserI,
+  };
 });
