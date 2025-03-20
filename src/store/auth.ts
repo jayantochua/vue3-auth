@@ -45,27 +45,13 @@ export const useAuthStore = defineStore("auth", () => {
   /**
    * Saves authentication tokens
    */
-  function saveTokens(access_token?: string, refresh_token?: string, csrf_token?: string) {
-    if (!access_token || !refresh_token || !csrf_token) {
-      user.value = null;
-      isAuthenticatedStatus.value = false;
-      loginResult.value = null;
-      accessToken.value = null;
-      refreshToken.value = null;
+  function saveTokens(csrf_token?: string) {
+    if (!csrf_token) {
       csrfToken.value = null;
     } else {
-      accessToken.value = access_token;
-      refreshToken.value = refresh_token;
       csrfToken.value = csrf_token;
     }
-
     console.log("saveTokens");
-    if (access_token) {
-      console.log("   access_token", access_token.slice(0, 8) + "..." + access_token.slice(-12));
-    }
-    if (refresh_token) {
-      console.log("   refresh_token", refresh_token.slice(0, 8) + "..." + refresh_token.slice(-12));
-    }
     if (csrf_token) {
       console.log("   csrf_token", csrf_token.slice(0, 8) + "..." + csrf_token.slice(-12));
     }
@@ -93,7 +79,7 @@ export const useAuthStore = defineStore("auth", () => {
       const res: LoginResult = response.data;
       if (res.success) {
         token_expires_in.value = res.expires_in;
-        saveTokens(res.access_token, res.refresh_token, res.csrf_token);
+        saveTokens(res.csrf_token);
         startRefreshTokenTimer();
       } else {
         saveTokens();
@@ -194,23 +180,25 @@ export const useAuthStore = defineStore("auth", () => {
 
     try {
       const response = await axios.post(`${apiBaseUrl}/auth/client/login`, credentials);
-      console.log("login.response", response);
+      console.log("login.response.data", response.data);
 
       const res: LoginResult = response.data;
       token_expires_in.value = res.expires_in;
       loginResult.value = res;
 
       isAuthenticatedStatus.value = res.success;
+      console.log("isAuthenticatedStatus.value#1", isAuthenticatedStatus.value);
 
       if (isAuthenticatedStatus.value) {
-        saveTokens(res.access_token, res.refresh_token, res.csrf_token);
+        saveTokens(res.csrf_token);
         startRefreshTokenTimer();
       } else {
         error.value = res.message || "";
       }
-
+      console.log("isAuthenticatedStatus.value#2", isAuthenticatedStatus.value);
       return isAuthenticatedStatus.value;
     } catch (error: any) {
+      console.error("Login error");
       error.value = error.response?.data?.message || "Login failed. Please try again.";
       return false;
     } finally {
@@ -223,9 +211,10 @@ export const useAuthStore = defineStore("auth", () => {
    */
   async function logout(): Promise<void> {
     try {
-      if (accessToken.value) {
-        await axios.post(`${apiBaseUrl}/auth/client/logout`);
-      }
+      user.value = null;
+      isAuthenticatedStatus.value = false;
+      loginResult.value = null;
+      await axios.post(`${apiBaseUrl}/auth/client/logout`);
     } catch (error) {
       console.error("Logout API error:", error);
     } finally {

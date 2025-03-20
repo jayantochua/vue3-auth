@@ -50,18 +50,22 @@ const authStore = useAuthStore();
 // Reactive state for form credentials
 const credentials = reactive<LoginCredentials>({
   username: "civan",
-  pswd: "1"
+  pswd: "1",
+  need_cookies: true
 });
 
 // Handle login logic
 const handleLogin = async () => {
   console.log('credentials', credentials)
   const success = await authStore.login(credentials);
+  console.log('handleLogin', success)
   if (success) {
     // redirectPath disimpan oleh router.beforeEach lihat (/src/router/index.ts)
     // supaya bisa setelah login masuk ke page yang sama
     //
-    router.push(authStore.redirectPath || "/dashboard");
+    // router.push(authStore.redirectPath || "/dashboard");
+    
+    router.push("/dashboard");
   }
 };
 </script>

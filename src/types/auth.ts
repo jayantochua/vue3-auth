@@ -11,6 +11,7 @@ export interface User {
 export interface LoginCredentials {
   username: string;
   pswd: string;
+  need_cookies: boolean;
 }
 
 export interface LoginResult {
